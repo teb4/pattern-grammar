@@ -1,19 +1,19 @@
 # Pattern Grammar
 
-**Читаемые паттерны вместо регулярных выражений**
+**Human-readable patterns instead of regular expressions**
 
 ---
 
-## 🎯 Что это?
+## 🎯 What is this?
 
-`pattern-grammar` — это библиотека для описания паттернов в понятном человеку виде.
+`pattern-grammar` is a library for describing patterns in a human-friendly way.
 
-Вместо непонятной регулярки:
+Instead of an opaque regex:
 ```python
 pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 ```
 
-Пишите читаемую грамматику:
+Write readable grammar:
 ```bnf
 email ::= username "@" domain "." tld
 username ::= [a-zA-Z0-9._%+-]+
@@ -23,38 +23,32 @@ tld ::= [a-zA-Z]{2,}
 
 ---
 
-## 📦 Установка
+## 📦 Installation
 
-### Из PyPI
-
-```bash
-pip install pattern-grammar
-```
-
-### Локальная установка (для разработки)
+### Local installation (for development)
 
 ```bash
-# Клонируем репозиторий
-git clone https://github.com/yourusername/pattern-grammar.git
+# Clone the repository
+git clone https://github.com/teb4/pattern-grammar.git
 cd pattern-grammar
 
-# Установка в режиме разработки
+# Install in development mode
 pip install -e .
 
-# Или просто установка зависимостей
+# Or just install dependencies
 pip install -r requirements.txt
 ```
 
 ---
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Пример 1: Простая валидация
+### Example 1: Simple validation
 
 ```python
 from pattern_grammar import Pattern
 
-# Определяем паттерн
+# Define a pattern
 pattern = Pattern("""
     email ::= username "@" domain "." tld
     username ::= [a-zA-Z0-9._%+-]+
@@ -62,12 +56,12 @@ pattern = Pattern("""
     tld ::= [a-zA-Z]{2,}
 """)
 
-# Проверяем
+# Check
 print(pattern.match('email', 'test@example.com'))  # True
 print(pattern.match('email', 'invalid'))           # False
 ```
 
-### Пример 2: Сложная структура (рекурсия)
+### Example 2: Complex structure (recursion)
 
 ```python
 pattern = Pattern("""
@@ -81,53 +75,53 @@ print(pattern.match('expr', '2 + 3 * 4'))        # True
 print(pattern.match('expr', '2 + (3 * 4)'))      # True
 print(pattern.match('expr', '(2 + 3) * 4'))      # True
 
-# Получаем дерево разбора
+# Get parse tree
 tree = pattern.parse('expr', '2 + 3 * 4')
 print(tree.pretty())
 ```
 
 ---
 
-## 📖 Синтаксис
+## 📖 Syntax
 
-### Основные конструкции
+### Basic constructs
 
 ```bnf
-# Определение правила
-<имя> ::= <тело>
+# Rule definition
+<name> ::= <body>
 
-# Альтернатива
+# Alternation
 expr ::= term | expr "+" term
 
-# Группировка
+# Grouping
 group ::= "(" expr ")"
 
-# Повторение
+# Repetition
 list ::= item ("," item)*
 
-# Опциональность
+# Optional
 optional ::= prefix? item
 
-# Диапазоны
+# Ranges
 pin ::= digit{4}
 byte ::= digit{1,3}
 ```
 
-### Многострочные правила
+### Multi-line rules
 
-Длинные правила можно разбивать на несколько строк для лучшей читаемости. Строки с отступом считаются продолжением предыдущего правила:
+Long rules can be split across multiple lines for better readability. Lines with indentation are treated as continuations of the previous rule:
 
 ```bnf
-# Альтернативы на отдельных строках
+# Alternatives on separate lines
 scheme ::= "http" | "https" | "ftp"  | "file" | "ssh"
          | "git"  | "svn"  | "mailto"| "news" | "irc"
          | "rtsp" | "webcal"
 
-# Последовательность на нескольких строках
+# Sequence across multiple lines
 ipv6_full ::= hex4 ":" hex4 ":" hex4 ":" hex4 ":"
               hex4 ":" hex4 ":" hex4 ":" hex4
 
-# Альтернативы с выравниванием
+# Alternatives with alignment
 dec-octet ::= "25"[0-5]
             | "2"[0-4][0-9]
             | "1"[0-9][0-9]
@@ -135,107 +129,105 @@ dec-octet ::= "25"[0-5]
             | [0-9]
 ```
 
-> **Правило:** строка является продолжением предыдущего правила, если она начинается с пробела или таба и не содержит `::=`.
+> **Rule:** a line is treated as a continuation of the previous rule if it starts with a space or tab and does not contain `::=`.
 
 
-### Комментарии
+### Comments
 
-Комментарии начинаются с `#` и **должны находиться на отдельной строке**. Комментарии в конце строки с правилом не поддерживаются.
+Comments start with `#` and **must be on their own line**. Inline comments at the end of a rule line are not supported.
 
 ```bnf
-# ✅ Правильно: комментарий на отдельной строке
+# ✅ Correct: comment on its own line
 email ::= username "@" domain "." tld
-username ::= [a-z]+    # ❌ НЕПРАВИЛЬНО: комментарий в конце строки
-domain ::= [a-z]+      # Парсер прочитает это как часть правила!
+username ::= [a-z]+    # ❌ WRONG: inline comment
+domain ::= [a-z]+      # The parser will read this as part of the rule!
 
-# ✅ Правильно:
-# Определение домена
+# ✅ Correct:
+# Domain definition
 domain ::= [a-z]+
 ```
 
-> **Важно:** Парсер читает строку целиком. Если после правила поставить #, всё, включая комментарий, будет считаться частью правила. Это может привести к неожиданным ошибкам.
+> **Important:** The parser reads the entire line. If you place a `#` after a rule, everything including the comment will be treated as part of the rule. This can lead to unexpected errors.
 
-### Почему так?
+### Why this design?
 
-Такое решение принято намеренно для:
+This decision was made intentionally to:
 
-    Простой и быстрой обработки грамматики — не нужно экранировать # в правилах
+- Keep grammar processing simple and fast — no need to escape `#` in rules
+- Eliminate ambiguity — it's always clear what's a rule and what's a comment
+- Maintain compatibility with BNF-like formats — many parsers require comments on separate lines
 
-    Отсутствия неоднозначности — всегда понятно, где правило, а где комментарий
+### Exception
 
-    Совместимости с BNF-подобными форматами — многие парсеры требуют комментарии на отдельных строках
-
-### Исключение
-
-Символ # можно использовать внутри строковых литералов и символьных классов:
+The `#` character can be used inside string literals and character classes:
 
 ```bnf
-# ✅ Корректно: # внутри строки
+# ✅ Valid: # inside a string
 comment_line ::= "#" [a-zA-Z]+
 
-# ✅ Корректно: # в символьном классе
+# ✅ Valid: # in a character class
 hex_color ::= "#" [0-9a-fA-F]{6}
 
-# ✅ Корректно: # в строковом литерале
+# ✅ Valid: # in a string literal
 python_comment ::= "#" [^\n]*
 ```
 
-Если вам нужно, чтобы правило заканчивалось символом # (например, для hex-цветов), просто включите его в правило явно, как показано выше.
+If you need a rule that ends with `#` (e.g., for hex colors), simply include it in the rule explicitly as shown above.
 
-### Символьные классы
+### Character classes
 
-Синтаксис символьных классов такой же, как в регулярных выражениях:
+Character class syntax is the same as in regular expressions:
 
 ```bnf
-# Буквы
+# Letters
 alpha ::= [a-z]
 alpha ::= [a-zA-Z]
 
-# Цифры
+# Digits
 digit ::= [0-9]
 digit ::= \d
 
-# Буквы и цифры
+# Letters and digits
 alnum ::= [a-zA-Z0-9]
 
-# Любой символ
+# Any character
 any ::= .
 
-# Отрицание
+# Negation
 not_digit ::= [^0-9]
 ```
 
-### Литералы кавычек
+### Quote literals
 
-Для обозначения символа кавычки в литерале используйте **противоположный тип кавычек**:
+To represent a quote character inside a literal, use the **opposite type of quotes**:
 
 ```bnf
-# Литерал двойной кавычки — оборачиваем в одинарные
+# Double-quote literal — wrap in single quotes
 string ::= '"' chars '"'
 
-# Литерал одинарной кавычки — оборачиваем в двойные
+# Single-quote literal — wrap in double quotes
 quoted ::= "'" chars "'"
 ```
 
-Альтернатива — символьный класс `["]` или `[']`:
+Alternatively, use a character class `["]` or `[']`:
 
 ```bnf
 string ::= ["] chars ["]
 ```
 
-> ⚠️ **Важно:** синтаксис `"\""` (экранированная кавычка внутри того же типа кавычек) **не поддерживается**. Это сделано намеренно — экранирование внутри Python-строк делает грамматику нечитаемой, что противоречит цели библиотеки.
+> ⚠️ **Important:** The `"\""` syntax (escaped quote within the same quote type) is **not supported**. This is intentional — escaping inside Python strings makes grammars unreadable, which defeats the purpose of the library.
 
-### Встроенные классы
+### Built-in classes
 
-Для удобства доступны предопределённые классы:
+For convenience, predefined classes are available:
 
 ```bnf
-digit       ::= [0-9]          # Одна цифра
-digits      ::= [0-9]+         # Одна или более цифр
-alpha       ::= [a-zA-Z]       # Одна буква
-alnum       ::= [a-zA-Z0-9]    # Буква или цифра
-word        ::= [a-zA-Z0-9_]+  # Слово
-whitespace  ::= \s             # Пробельный символ
+digit       ::= [0-9]          # Single digit
+digits      ::= [0-9]+         # One or more digits
+alpha       ::= [a-zA-Z]       # Single letter
+alnum       ::= [a-zA-Z0-9]    # Letter or digit
+word        ::= [a-zA-Z0-9_]+  # Word
+whitespace  ::= \s             # Whitespace character
 ```
 
 ---
@@ -244,7 +236,7 @@ whitespace  ::= \s             # Пробельный символ
 
 ### `Pattern(grammar_text: str)`
 
-Создаёт паттерн из текста грамматики.
+Creates a pattern from grammar text.
 
 ```python
 pattern = Pattern("""
@@ -257,7 +249,7 @@ pattern = Pattern("""
 
 ### `pattern.match(rule_name: str, text: str) -> bool`
 
-Проверяет, соответствует ли текст правилу.
+Checks whether the text matches the rule.
 
 ```python
 pattern.match('email', 'test@example.com')  # True
@@ -266,7 +258,7 @@ pattern.match('email', 'invalid')           # False
 
 ### `pattern.parse(rule_name: str, text: str) -> Tree | None`
 
-Парсит текст и возвращает дерево разбора (AST).
+Parses the text and returns a parse tree (AST).
 
 ```python
 tree = pattern.parse('expr', '2 + 3 * 4')
@@ -275,67 +267,68 @@ print(tree.pretty())
 
 ### `pattern.findall(rule_name: str, text: str) -> List[str]`
 
-Находит все совпадения в тексте (только для нерекурсивных правил).
+Finds all matches in the text (non-recursive rules only).
 
 ```python
 pattern = Pattern('hashtag ::= "#" [a-z0-9_]+')
-text = "Это #тестовый пост с #несколькими #хештегами"
+text = "This is a #test post with #multiple #hashtags"
 pattern.findall('hashtag', text)
-# ['тестовый', 'несколькими', 'хештегами']
+# ['#test', '#multiple', '#hashtags']
 ```
 
 ### `pattern.get_info() -> dict`
 
-Возвращает информацию о грамматике.
+Returns information about the grammar.
 
 ```python
 info = pattern.get_info()
 print(info)
 ```
 
-### Быстрые функции
+### Quick functions
 
 ```python
 from pattern_grammar import match, parse
 
-# Быстрая проверка
+# Quick check
 result = match("""
     email ::= [a-z]+@[a-z]+\.[a-z]{2,}
 """, 'email', 'test@example.com')
 
-# Быстрый парсинг
+# Quick parse
 tree = parse("""
     expr ::= term (("+"|"-") term)*
-    term ::= [0-9]+
+    term ::= factor (("*"|"/") factor)*
+    factor ::= NUMBER | "(" expr ")"
 """, 'expr', '1 + 2 + 3')
 ```
 
 ---
 
-## 🧠 Как это работает?
+## 🧠 How it works?
 
-### Автоматический выбор метода
+### Automatic method selection
 
-Библиотека **автоматически** определяет, как реализовать каждое правило:
+The library **automatically** determines how to implement each rule:
 
-| Тип правила | Реализация | Почему |
-|-------------|------------|--------|
-| **Нерекурсивное** | Регулярное выражение | Быстро и эффективно |
-| **Рекурсивное** | Lark парсер | Поддерживает вложенность |
+| Rule type | Implementation | Why |
+|-----------|---------------|-----|
+| **Non-recursive** | Regular expression | Fast and efficient |
+| **Recursive** | Lark parser | Supports nesting |
 
 ```python
 pattern = Pattern("""
-    # Нерекурсивные → быстрые регулярки
+    # Non-recursive → fast regex
     email ::= username "@" domain "." tld
     username ::= [a-z]+
     
-    # Рекурсивные → полноценный парсер
+    # Recursive → full parser
     expr ::= term (("+"|"-") term)*
     term ::= factor (("*"|"/") factor)*
     factor ::= NUMBER | "(" expr ")"
 """)
 
-# Смотрим, что использовано
+# See what was used
 print(pattern.get_info())
 # {
 #   'regex_rules': ['email', 'username', ...],
@@ -345,9 +338,9 @@ print(pattern.get_info())
 
 ---
 
-## 📚 Примеры
+## 📚 Examples
 
-### Пример 1: Валидация email
+### Example 1: Email validation
 
 ```python
 from pattern_grammar import Pattern
@@ -371,7 +364,7 @@ for test in tests:
     print(f"{test:40} -> {result}")
 ```
 
-### Пример 2: Математические выражения
+### Example 2: Math expressions
 
 ```python
 pattern = Pattern("""
@@ -387,7 +380,7 @@ expressions = [
     '2 + (3 * 4)',
     '(2 + 3) * 4',
     '10 / 2 + 3',
-    '2 +',  # Невалидное
+    '2 +',  # Invalid
 ]
 
 for expr in expressions:
@@ -395,7 +388,7 @@ for expr in expressions:
     print(f"{expr:20} -> {result}")
 ```
 
-### Пример 3: Валидация дат
+### Example 3: Date validation
 
 ```python
 pattern = Pattern("""
@@ -409,7 +402,7 @@ dates = [
     '2024-01-15',
     '2024-12-31',
     '2024-02-29',
-    '2024-13-01',  # Невалидный месяц
+    '2024-13-01',  # Invalid month
 ]
 
 for date in dates:
@@ -417,17 +410,17 @@ for date in dates:
     print(f"{date} -> {result}")
 ```
 
-### Пример 4: Валидация URL (многострочная грамматика)
+### Example 4: URL validation (multi-line grammar)
 
-Многострочный синтаксис особенно полезен для сложных грамматик:
+The multi-line syntax is especially useful for complex grammars:
 
 ```python
 pattern = Pattern(r"""
     url      ::= scheme "://" authority path? query? fragment?
 
-    scheme   ::= "http" | "https" | "ftp"  | "file" | "ssh"
-               | "git"  | "svn"  | "mailto"| "news" | "irc"
-               | "rtsp" | "webcal"
+    scheme   ::= "http" | "https" | "ftp" | "file" | "ssh"
+            | "git" | "svn" | "mailto" | "news" | "irc"
+            | "rtsp" | "webcal"
 
     authority ::= userinfo? host port?
     userinfo  ::= [^@]+ "@"
@@ -445,81 +438,338 @@ pattern = Pattern(r"""
                 | [0-9]
 
     path     ::= "/" (path_segment "/")* path_segment?
+    path_segment ::= [a-zA-Z0-9\-._~!$&'()*+,;=:@%]+
+
     query    ::= "?" [a-zA-Z0-9\-._~!$&'()*+,;=:@%?]*
     fragment ::= "#" [a-zA-Z0-9\-._~!$&'()*+,;=:@%?#]*
 """)
 
-print(pattern.match('url', 'https://example.com/path?q=1'))  # True
+print(pattern.match('url', 'https://example.com/path?q=1'))   # True
 print(pattern.match('url', 'http://192.168.1.1:8080'))        # True
 print(pattern.match('url', 'not a url'))                      # False
 ```
 
+### Example 5: URL validation — Regex vs Grammar
+
+Compare how complex patterns look in regex versus Pattern Grammar:
+
+#### Regex (sourced from the web. 44 lines of madness — try reading this!):
+
+```python
+# Monster regex for URL (RFC 3986/3987)
+URL_MONSTER = re.compile(
+    r'^(?:[a-zA-Z][a-zA-Z0-9+\-.]*:)?'  # scheme
+    r'(?://'  # authority
+        r'(?:[a-zA-Z0-9\-._~!$&\'()*+,;=]+@)?'  # userinfo
+        r'(?:'  # host
+            # IPv4
+            r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+            r'|'
+            # IPv6 — 15 lines of nightmare!
+            r'\[(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,7}:'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}'
+            r'|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})'
+            r'|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)'
+            r'|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+'
+            r'|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+            r'|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+            r'\]'
+            r'|'
+            # domain name
+            r'(?:[a-zA-Z0-9\-._~!$&\'()*+,;=]|%[0-9a-fA-F]{2})+(?:\.(?:[a-zA-Z0-9\-._~!$&\'()*+,;=]|%[0-9a-fA-F]{2})+)*'
+        r')'
+        r'(?::[0-9]*)?'  # port
+    r')?'  # end authority
+    r'(?:/(?:[a-zA-Z0-9\-._~!$&\'()*+,;=:@]|%[0-9a-fA-F]{2})*)*'  # path
+    r'(?:\?(?:[a-zA-Z0-9\-._~!$&\'()*+,;=:@/?]|%[0-9a-fA-F]{2})*)?'  # query
+    r'(?:#(?:[a-zA-Z0-9\-._~!$&\'()*+,;=:@/?]|%[0-9a-fA-F]{2})*)?$'  # fragment
+)
+```
+
+#### Pattern Grammar (full URL grammar):
+
+```bnf
+# Main rule
+url ::= scheme "://" authority path? query? fragment?
+
+# Scheme (protocol)
+scheme ::= "http" | "https" | "ftp"  | "file" | "ssh"
+         | "git"  | "svn"  | "mailto"| "news" | "irc"
+         | "rtsp" | "webcal"
+
+# Authority (host + optional userinfo and port)
+authority ::= userinfo? host port?
+userinfo  ::= [^@]+ "@"
+host      ::= ipv4 | ipv6 | domain
+port      ::= ":" [0-9]{2,5}
+
+# Domain names
+domain   ::= label ("." label)*
+alnum    ::= [a-zA-Z0-9]
+alnumhyp ::= [a-zA-Z0-9-]
+label    ::= alnum (alnumhyp* alnum)?
+
+# IPv4 addresses
+ipv4      ::= dec-octet "." dec-octet "." dec-octet "." dec-octet
+dec-octet ::= "25"[0-5]     # 250-255
+            | "2"[0-4][0-9] # 200-249
+            | "1"[0-9][0-9] # 100-199
+            | [1-9][0-9]    # 10-99
+            | [0-9]          # 0-9
+
+# IPv6 addresses (all forms)
+ipv6            ::= "[" ( ipv6_full | ipv6_compressed | ipv6_v4mapped | ipv6_linklocal ) "]"
+hex4            ::= [0-9a-fA-F]{1,4}
+
+# Full form (8 groups)
+ipv6_full       ::= hex4 ":" hex4 ":" hex4 ":" hex4 ":"
+                    hex4 ":" hex4 ":" hex4 ":" hex4
+
+# Compressed form with :: (all variants)
+ipv6_compressed ::= ipv6_start | ipv6_middle | ipv6_end
+ipv6_start      ::= "::" (hex4? (":" hex4)*)
+ipv6_middle     ::= hex4 "::" hex4? (":" hex4)*
+ipv6_end        ::= hex4 (":" hex4)+ "::" hex4?
+                  | hex4 (":" hex4)+ "::"
+
+# Special IPv6 forms
+ipv6_v4mapped   ::= "::ffff:" ipv4
+ipv6_linklocal  ::= "fe80:" (":" hex4)* "%" [a-zA-Z0-9]+
+
+# Path
+path_char    ::= [a-zA-Z0-9\-._~!$&'()*+,;=:@%]
+path_segment ::= path_char+
+path         ::= "/" (path_segment "/")* path_segment?
+
+# Query parameters
+query_char ::= [a-zA-Z0-9\-._~!$&'()*+,;=:@%?]
+query      ::= "?" query_char*
+
+# Fragment
+fragment_char ::= [a-zA-Z0-9\-._~!$&'()*+,;=:@%?#]
+fragment      ::= "#" fragment_char*
+```
+
+### Moreover, it turned out the regex isn't entirely correct.
+
+#### What the regex missed:
+
+    ❌ All IPv6 addresses (except the full form)
+
+        http://[2001:db8::1] — IPv6 with compression
+
+        http://[::1] — IPv6 localhost
+
+        http://[::ffff:192.0.2.1] — IPv4-mapped
+
+        http://[fe80::1%eth0] — IPv6 with zone ID
+
+    ❌ http:// — empty host
+
+    ❌ http://.com — dot at the start of the domain
+
+    ❌ http://example..com — double dot in domain
+
+    ❌ http://-example.com — leading hyphen
+
+    ❌ http://example-.com — trailing hyphen
+
+#### Where Pattern Grammar fell short:
+
+    ⚠️ http://256.256.256.256 — marked as valid, even though it's an invalid IPv4 (but could be a valid domain name!)
+
+> **Conclusion:** Regex is not suitable for complex formats — it becomes too convoluted in such cases. Pattern Grammar can be understood, debugged, and maintained.
+
+
+### Additionally, you can write a longer version that more closely follows RFC terminology and is suitable for further extension:
+
+```bnf
+# =============================================================================
+# BASIC CHARACTER CLASSES (RFC 3986, Section 2.2-2.4)
+# Defined ONCE and reused across all rules
+# =============================================================================
+
+# unreserved — always safe characters, no percent-encoding needed
+unreserved  ::= [a-zA-Z0-9\-._~]
+
+# gen-delims — general delimiters with special meaning in URLs
+gen-delims  ::= [:/?#[]@]
+
+# sub-delims — reserved subset for user data
+sub-delims  ::= [!$&'()*+,;=]
+
+# reserved — combined set (gen-delims + sub-delims)
+reserved    ::= gen-delims | sub-delims
+
+# pct-encoded — percent-encoding (%XX where XX are hex digits)
+pct-encoded ::= "%" [0-9a-fA-F]{2}
+
+# =============================================================================
+# COMPOSITION: assembling classes for specific URL parts
+# Using alternation (|) instead of duplicating character classes
+# =============================================================================
+
+# pchar — primary building block for path, query, fragment (RFC 3986, Section 3.3)
+pchar       ::= unreserved | pct-encoded | sub-delims | ":" | "@"
+
+# query-char — extends pchar for query string (adds / and ?)
+query-char  ::= pchar | "/" | "?"
+
+# fragment-char — extends pchar for fragment (adds / ? #)
+fragment-char ::= pchar | "/" | "?" | "#"
+
+# userinfo-char — for login/password (excludes @, which is a separator)
+userinfo-char ::= unreserved | pct-encoded | sub-delims | ":"
+
+# reg-name — for domain names in authority (RFC 3986, Section 3.2)
+reg-name    ::= ( unreserved | pct-encoded | sub-delims )+
+
+# =============================================================================
+# MAIN URL RULE
+# =============================================================================
+
+url         ::= scheme "://" authority path? query? fragment?
+
+# =============================================================================
+# SCHEME (PROTOCOL)
+# =============================================================================
+
+scheme      ::= "http" | "https" | "ftp"  | "file" | "ssh"
+              | "git"  | "svn"  | "mailto"| "news" | "irc"
+              | "rtsp" | "webcal"
+
+# =============================================================================
+# AUTHORITY (HOST + OPTIONAL USERINFO AND PORT)
+# =============================================================================
+
+authority   ::= userinfo? host port?
+userinfo    ::= userinfo-char+ "@"
+host        ::= ipv4 | ipv6 | domain
+port        ::= ":" [0-9]{1,5}
+
+# =============================================================================
+# DOMAIN NAMES
+# =============================================================================
+
+domain      ::= label ("." label)*
+alnum       ::= [a-zA-Z0-9]
+alnumhyp    ::= [a-zA-Z0-9-]
+label       ::= alnum (alnumhyp* alnum)?
+
+# =============================================================================
+# IPV4 ADDRESSES
+# =============================================================================
+
+ipv4        ::= dec-octet "." dec-octet "." dec-octet "." dec-octet
+dec-octet   ::= "25"[0-5]
+              | "2"[0-4][0-9]
+              | "1"[0-9][0-9]
+              | [1-9][0-9]
+              | [0-9]
+
+# =============================================================================
+# IPV6 ADDRESSES (ALL FORMS)
+# =============================================================================
+
+ipv6            ::= "[" ( ipv6_full | ipv6_compressed | ipv6_v4mapped | ipv6_linklocal ) "]"
+hex4            ::= [0-9a-fA-F]{1,4}
+
+# Full form (8 groups of 4 hex digits)
+ipv6_full       ::= hex4 ":" hex4 ":" hex4 ":" hex4 ":"
+                    hex4 ":" hex4 ":" hex4 ":" hex4
+
+# Compressed form with :: (all placement variants)
+ipv6_compressed ::= ipv6_start | ipv6_middle | ipv6_end
+ipv6_start      ::= "::" (hex4? (":" hex4)*)
+ipv6_middle     ::= hex4 "::" hex4? (":" hex4)*
+ipv6_end        ::= hex4 (":" hex4)+ "::" hex4?
+                  | hex4 (":" hex4)+ "::"
+
+# Special IPv6 forms
+ipv6_v4mapped   ::= "::ffff:" ipv4
+ipv6_linklocal  ::= "fe80:" (":" hex4)* "%" [a-zA-Z0-9]+
+
+# =============================================================================
+# PATH
+# Using pchar composition instead of monolithic [a-zA-Z0-9\-._~!$&'()*+,;=:@%]
+# =============================================================================
+
+path-segment  ::= pchar+
+path          ::= "/" (path-segment "/")* path-segment?
+
+# =============================================================================
+# QUERY PARAMETERS
+# Using query-char composition
+# =============================================================================
+
+query         ::= "?" query-char*
+
+# =============================================================================
+# FRAGMENT
+# Using fragment-char composition
+# =============================================================================
+
+fragment      ::= "#" fragment-char*
+```
+
 ---
 
-## 🧪 Запуск примеров и тестов
+## 🧪 Running examples
 
-### Запуск примеров
+### Running examples
 
 ```bash
-# Пример валидации email
+# Email validation example
 python examples/email_validation.py
 
-# Пример математических выражений
+# Math expressions example
 python examples/math_expressions.py
 
-# Пример валидации дат
+# Date validation example
 python examples/date_validation.py
 ```
 
-### Запуск тестов
-
-```bash
-# Все тесты
-pytest tests/ -v
-
-# Конкретный тест
-pytest tests/test_simple_patterns.py -v
-
-# С покрытием кода
-pytest tests/ -v --cov=pattern_grammar
-```
-
 ---
 
-## 🆚 Сравнение с регулярными выражениями
+## 🆚 Comparison with regular expressions
 
-| Аспект | Регулярные выражения | Pattern Grammar |
+| Aspect | Regular Expressions | Pattern Grammar |
 |--------|---------------------|-----------------|
-| **Простые паттерны** | ✅ Лаконично | ✅ Эквивалентно |
-| **Сложные паттерны** | ❌ Ад | ✅ Структурировано |
-| **Читаемость** | ❌ Плохая | ✅ Отличная |
-| **Многострочность** | ❌ Не поддерживается | ✅ Встроена |
-| **Поддержка** | ❌ Трудно | ✅ Легко |
-| **Тестирование** | ❌ Всё или ничего | ✅ По частям |
-| **Рекурсия** | ❌ Невозможно | ✅ Поддерживается |
-| **Документация** | ❌ Отдельно | ✅ Встроена |
+| **Simple patterns** | ✅ Concise | ✅ Equivalent |
+| **Complex patterns** | ❌ A nightmare | ✅ Structured |
+| **Readability** | ❌ Poor | ✅ Excellent |
+| **Multi-line** | ❌ Not supported | ✅ Built-in |
+| **Maintainability** | ❌ Difficult | ✅ Easy |
+| **Testing** | ❌ All or nothing | ✅ Rule by rule |
+| **Recursion** | ❌ Impossible | ✅ Supported |
+| **Documentation** | ❌ Separate | ✅ Built-in |
 
 ---
 
-## ⚠️ Известные ограничения
+## ⚠️ Known limitations
 
-- **Комментарии** — только на отдельных строках (не в конце правил)
-- **Рекурсия** — глубина рекурсии ограничена стеком Python (обычно ~1000)
-- **Lookahead/lookbehind** — не поддерживаются (это особенность BNF-подхода)
-- **Экранирование кавычек** — не поддерживается `\"`, используйте разные типы кавычек
+- **Comments** — only on separate lines (not at the end of rules)
+- **Recursion** — recursion depth is limited by Python's stack (typically ~1000)
+- **Lookahead/lookbehind** — not supported (this is a characteristic of the BNF approach)
+- **Quote escaping** — `\"` is not supported; use different quote types instead
 
 
-## 📄 Лицензия
+## 📄 License
 
-Этот проект распространяется под лицензией MIT.
-
----
-
-## 🙏 Благодарности
-
-- [Lark Parser](https://lark-parser.readthedocs.io/) — мощный парсер для Python
-- Джону Бэкусу и Петеру Науру — создателям БНФ
+This project is distributed under the MIT License.
 
 ---
 
-**Счастливого паттернинга! 🎉**
+## 🙏 Acknowledgments
+
+- [Lark Parser](https://lark-parser.readthedocs.io/) — a powerful parser for Python
+- John Backus and Peter Naur — creators of BNF
+
+---
+
+**Happy patterning! 🎉**
