@@ -1,0 +1,30 @@
+# =============================================================================
+# RFC 3986 Core — базовые строительные блоки URI
+# =============================================================================
+
+# unreserved — всегда безопасные символы
+unreserved  ::= [a-zA-Z0-9\-._~]
+
+# pct-encoded — процент-кодирование (%XX)
+pct-encoded ::= "%" [0-9a-fA-F] [0-9a-fA-F]
+
+# sub-delims — подмножество reserved для данных пользователя
+sub-delims  ::= [!$&'()*+,;=]
+
+# gen-delims — общие разделители
+gen-delims  ::= [:/?#\[\]@]
+
+# pchar — основной строительный блок для path, query, fragment
+pchar       ::= unreserved | pct-encoded | sub-delims | ":" | "@"
+
+# query-char — расширяет pchar для query-строки
+query-char  ::= pchar | "/" | "?"
+
+# fragment-char — расширяет pchar для фрагмента
+fragment-char ::= pchar | "/" | "?" | "#"
+
+# userinfo-char — для логина/пароля
+userinfo-char ::= unreserved | pct-encoded | sub-delims | ":"
+
+# reg-name — для доменных имён в authority
+reg-name    ::= ( unreserved | pct-encoded | sub-delims )+

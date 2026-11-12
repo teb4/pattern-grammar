@@ -13,28 +13,6 @@ URL_REGEX = r'^(https?|ftp):\/\/(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9
 # 2. ЭКВИВАЛЕНТ НА PATTERN GRAMMAR
 # =============================================================================
 URL_GRAMMAR = """
-url ::= scheme "://" host port? path? query? fragment?
-scheme ::= "http" | "https" | "ftp"
-host ::= domain | "localhost" | ipv4
-# 🔧 ИСПРАВЛЕНО: точка внутри повторяемого элемента
-domain ::= label_with_dot+ tld
-label_with_dot ::= label "."
-label ::= alnum (alnum_or_dash* alnum)?
-tld ::= alpha{2,}
-ipv4 ::= octet "." octet "." octet "." octet
-octet ::= digit{1,3}
-port ::= ":" digit{2,5}
-path ::= "/" path_segment*
-path_segment ::= [^\\s?]+
-query ::= "?" [^\\s#]*
-fragment ::= "#" [^\\s]*
-alnum ::= [a-zA-Z0-9]
-alpha ::= [a-zA-Z]
-digit ::= [0-9]
-alnum_or_dash ::= [a-zA-Z0-9-]
-"""
-
-URL_GRAMMAR = """
 # URL грамматика (http, https, ftp)
 url ::= scheme "://" authority path? query? fragment?
 

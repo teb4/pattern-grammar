@@ -17,50 +17,6 @@ SEMVER_GRAMMAR = """
 # SemVer (Semantic Versioning) грамматика
 # https://semver.org/spec/v2.0.0.html
 
-semver ::= major "." minor "." patch pre_release? build_metadata?
-
-# Основные компоненты версии
-major ::= zero | non_zero_digit digits*
-minor ::= zero | non_zero_digit digits*
-patch ::= zero | non_zero_digit digits*
-
-# Pre-release версия
-pre_release ::= "-" pre_release_version
-
-pre_release_version ::= pre_release_identifier ("." pre_release_identifier)*
-
-pre_release_identifier ::= numeric_identifier
-                         | alphanumeric_identifier
-
-# Числовые идентификаторы (без ведущих нулей)
-numeric_identifier ::= zero
-                     | non_zero_digit digits*
-
-# Буквенно-цифровые идентификаторы (могут содержать дефисы)
-alphanumeric_identifier ::= digit* letter_or_dash alnum_or_dash*
-
-# Build metadata
-build_metadata ::= "+" build_identifier
-
-build_identifier ::= build_segment ("." build_segment)*
-
-build_segment ::= alnum_or_dash+
-
-# Базовые компоненты
-zero             ::= "0"
-non_zero_digit   ::= [1-9]
-digit            ::= [0-9]
-digits           ::= [0-9]+
-letter_or_dash   ::= [a-zA-Z-]
-alnum_or_dash    ::= [a-zA-Z0-9-]
-"""
-
-# Рекурсивная версия
-
-SEMVER_GRAMMAR = """
-# SemVer (Semantic Versioning) грамматика
-# https://semver.org/spec/v2.0.0.html
-
 semver ::= core ("-" pre_release)? ("+" build)?
 
 core ::= number "." number "." number

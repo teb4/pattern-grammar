@@ -17,59 +17,6 @@ UK_POSTCODE_REGEX = r'^(?:GIR 0AA|(?:(?:(?:A[BL]|B[ABDHLNRSTX]?|C[ABFHMORTVW]|D[
 
 UK_POSTCODE_GRAMMAR = """
 # =============================================================================
-# UK POSTCODE GRAMMAR — исправлено inward_letter + london специальные
-# Совместима со всеми тестами при postcode.upper()
-# =============================================================================
-
-postcode ::= gir_special | standard_postcode
-
-gir_special ::= "GIR" space? "0AA"
-
-standard_postcode ::= outward_code space? inward_code
-
-outward_code ::= area district_part
-
-# Area (outward letters) — без изменений, т.к. работает
-area ::= area_single | area_double
-
-area_single ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "K" | "L" | "M" | "N" | "O" | "P" | "R" | "S" | "T" | "U" | "W" | "Y"
-
-area_double ::= "AB" | "AL" | "BB" | "BD" | "BH" | "BL" | "BN" | "BR" | "BS" | "BT" | "CA" | "CB" | "CF" | "CH" | "CM" | "CO" | "CR" | "CT" | "CV" | "CW"
-              | "DA" | "DD" | "DE" | "DG" | "DH" | "DL" | "DN" | "DT" | "DY" | "EC" | "EH" | "EN" | "EX" | "FK" | "FY" | "GL" | "GY" | "GU" | "HA"
-              | "HD" | "HG" | "HP" | "HR" | "HS" | "HU" | "HX" | "IG" | "IM" | "IP" | "IV" | "JE" | "KA" | "KT" | "KW" | "KY" | "LA" | "LD" | "LE"
-              | "LL" | "LN" | "LS" | "LU" | "ME" | "MK" | "ML" | "NE" | "NG" | "NN" | "NP" | "NR" | "NW" | "OL" | "OX" | "PA" | "PE" | "PH" | "PL"
-              | "PO" | "PR" | "RG" | "RH" | "RM" | "SA" | "SE" | "SG" | "SK" | "SL" | "SM" | "SN" | "SO" | "SP" | "SR" | "SS" | "ST" | "SW" | "SY"
-              | "TA" | "TD" | "TF" | "TN" | "TQ" | "TR" | "TS" | "TW" | "UB" | "WA" | "WC" | "WD" | "WF" | "WN" | "WR" | "WS" | "WV" | "YO" | "ZE"
-
-# District part — ключевой блок для EC/WC ограничения
-district_part ::= normal_district | london_special_district
-
-normal_district ::= district_digits | district_digits_with_letter
-
-district_digits ::= [1-9] [0-9]?
-
-district_digits_with_letter ::= [1-9] [0-9]? [A-HJKMNP-Y]
-
-london_special_district ::=
-      "EC" [1-4]                     # только 1–4
-    | "WC" [1-2]                     # только 1–2
-    | "E1W"   | "N1C"   | "N1P"   | "NW1W"   | "SE1P"
-    | "SW1" [A|E|H|P|V|W]
-    | "W1"  [A|B|C|D|F|G|H|J|K|L|M|N|P|R|S|T|U|W]
-
-# Inward code — ВАЖНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ
-inward_code ::= [0-9] inward_letter inward_letter
-
-inward_letter ::= [ABD-HJLNPR-UW-Z] | "C"     # Добавили C явно (был пропущен в диапазоне)
-
-# или эквивалентно (более читаемо и точно):
-# inward_letter ::= [ABD-HJLNPQRTUWXZ] | "C" | "Y"   # но твой диапазон был почти правильный, просто без C
-
-space ::= " "?
-"""
-
-UK_POSTCODE_GRAMMAR = """
-# =============================================================================
 # UK POSTCODE GRAMMAR — версия без ошибок (B33, DN55 True; EC5, WC3 False)
 # =============================================================================
 

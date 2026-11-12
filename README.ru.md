@@ -4,6 +4,14 @@
 
 ---
 
+## 🤖 Скилл для LLM
+
+В проекте есть **скилл для LLM-агентов** — руководство по замене regex на pattern grammar.
+При работе с этим репозиторием, если нужно конвертировать regex → pattern grammar,
+сначала прочитайте скилл: **[docs/knowledge-base/skills/use-pattern-grammar-for-regex.md](docs/knowledge-base/skills/use-pattern-grammar-for-regex.md)**
+
+---
+
 ## 🎯 Что это?
 
 `pattern-grammar` — это библиотека для описания паттернов в понятном человеку виде.
@@ -134,34 +142,20 @@ dec-octet ::= "25"[0-5]
 
 ### Комментарии
 
-Комментарии начинаются с `#` и **должны находиться на отдельной строке**. Комментарии в конце строки с правилом не поддерживаются.
+Комментарии начинаются с `#` и могут быть размещены на отдельной строке или inline в конце строки с правилом. Парсер корректно игнорирует символы `#` внутри строковых литералов и символьных классов.
 
 ```bnf
 # ✅ Правильно: комментарий на отдельной строке
 email ::= username "@" domain "." tld
-username ::= [a-z]+    # ❌ НЕПРАВИЛЬНО: комментарий в конце строки
-domain ::= [a-z]+      # Парсер прочитает это как часть правила!
 
-# ✅ Правильно:
-# Определение домена
-domain ::= [a-z]+
+# ✅ Правильно: inline-комментарий
+username ::= [a-z]+    # определение имени пользователя
+domain   ::= [a-z]+    # определение домена
 ```
-
-> **Важно:** Парсер читает строку целиком. Если после правила поставить #, всё, включая комментарий, будет считаться частью правила. Это может привести к неожиданным ошибкам.
-
-### Почему так?
-
-Такое решение принято намеренно для:
-
-    Простой и быстрой обработки грамматики — не нужно экранировать # в правилах
-
-    Отсутствия неоднозначности — всегда понятно, где правило, а где комментарий
-
-    Совместимости с BNF-подобными форматами — многие парсеры требуют комментарии на отдельных строках
 
 ### Исключение
 
-Символ # можно использовать внутри строковых литералов и символьных классов:
+Символ # можно использовать внутри строковых литералов и символьных классов — он будет сохранён как часть правила:
 
 ```bnf
 # ✅ Корректно: # внутри строки
@@ -232,6 +226,37 @@ word        ::= [a-zA-Z0-9_]+  # Слово
 whitespace  ::= \s             # Пробельный символ
 ```
 
+### Сообщения об ошибках с `@fail`
+
+Прикрепите к любому правилу пользовательское сообщение об ошибке через `@fail`. Сообщение будет выброшено как `PatternError`, если текст **не** соответствует правилу:
+
+```bnf
+email ::= [a-z]+ "@" [a-z]+ ".com" @fail "неверный email"
+```
+
+```python
+pattern.match('email', 'user@example.com')   # True
+# pattern.match('email', 'invalid')          # raises PatternError: неверный email
+```
+
+### Импорт внешних грамматик
+
+Переиспользуйте правила из встроенных библиотек или внешних `.pg` файлов:
+
+```bnf
+import "rfc3986-core.pg"
+
+url ::= scheme "://" authority path? query? fragment?
+```
+
+Поддерживаемые формы импорта:
+
+| Синтаксис | Описание |
+|-----------|----------|
+| `import "rfc3986-core.pg"` | Встроенная библиотека |
+| `import "./common.pg"` | Относительный путь (относительно вызывающего файла) |
+| `import "/abs/path.pg"` | Абсолютный путь |
+
 ---
 
 ## 🔍 API
@@ -285,6 +310,20 @@ pattern.findall('hashtag', text)
 ```python
 info = pattern.get_info()
 print(info)
+```
+
+### `pattern.generate(rule_name: str, count: int = 1, max_depth: int = 20) -> List[str]`
+
+Генерирует случайные строки, соответствующие правилу:
+
+```python
+pattern = Pattern("""
+    digit   ::= [0-9]
+    pin     ::= digit{4}
+""")
+
+print(pattern.generate('pin'))         # "3847"
+print(pattern.generate('pin', count=5)) # ["1234", "5678", ...]
 ```
 
 ### Быстрые функции
@@ -753,13 +792,144 @@ python examples/date_validation.py
 
 ---
 
+## 🌍 Unicode-классы
+
+Для работы с символами, выходящими за пределы ASCII (кириллица, греческий,
+арабский, китайский и т.д.), используйте синтаксис `UNICODE.<Класс>` внутри
+символьных классов. Библиотека автоматически переключается на пакет
+[`regex`](https://pypi.org/project/regex/), который поддерживает Unicode-свойства
+(`\p{...}`).
+
+```python
+from pattern_grammar import Pattern
+
+# Кириллические слова
+pattern = Pattern("""
+    cyrillic_word ::= [UNICODE.Cyrillic]+
+""")
+print(pattern.match('cyrillic_word', 'привет'))  # True
+print(pattern.match('cyrillic_word', 'hello'))   # False
+
+# Смешанные ASCII и Unicode
+pattern = Pattern("""
+    email ::= [UNICODE.Letter UNICODE.Digit ._%+\\-]+
+            "@" [UNICODE.Letter UNICODE.Digit .\\-]+
+            "." [UNICODE.Letter]{2,}
+""")
+print(pattern.match('email', 'café@münchen.de'))  # True
+print(pattern.match('email', '用户@例子.中国'))    # True
+```
+
+### Доступные Unicode-классы
+
+| Класс | Regex-эквивалент | Описание |
+|-------|-----------------|---------|
+| `UNICODE.Letter` | `\p{L}` | Любая буква |
+| `UNICODE.Lowercase` | `\p{Ll}` | Строчная буква |
+| `UNICODE.Uppercase` | `\p{Lu}` | Заглавная буква |
+| `UNICODE.Digit` | `\p{Nd}` | Десятичная цифра |
+| `UNICODE.Number` | `\p{N}` | Любое число |
+| `UNICODE.Punctuation` | `\p{P}` | Знак пунктуации |
+| `UNICODE.Separator` | `\p{Z}` | Разделитель (пробел) |
+| `UNICODE.Symbol` | `\p{S}` | Символ |
+| `UNICODE.Mark` | `\p{M}` |_combining mark_ |
+| `UNICODE.Latin` | `\p{Script=Latin}` | Латиница |
+| `UNICODE.Cyrillic` | `\p{Script=Cyrillic}` | Кириллица |
+| `UNICODE.Han` | `\p{Script=Han}` | Китайские иероглифы |
+| `UNICODE.Arabic` | `\p{Script=Arabic}` | Арабская письменность |
+| `UNICODE.Devanagari` | `\p{Script=Devanagari}` | Хинди/маратхи |
+| `UNICODE.Hangul` | `\p{Script=Hangul}` | Корейский |
+| `UNICODE.Hiragana` | `\p{Script=Hiragana}` | Хирагана |
+| `UNICODE.Katakana` | `\p{Script=Katakana}` | Катакана |
+| `UNICODE.Thai` | `\p{Script=Thai}` | Тайский |
+| `UNICODE.Hebrew` | `\p{Script=Hebrew}` | Еврейский |
+| `UNICODE.AlphaNum` | `[\p{L}\p{Nd}]` | Буква или цифра |
+| `UNICODE.Word` | `[\p{L}\p{Nd}_]` | Символ слова |
+
+> **Примечание:** Unicode-классы требуют пакета `regex`. Установите его командой:
+> `pip install regex`. Когда `regex` недоступен и в паттерне используется
+> `UNICODE.*`, возникает `ImportError` с инструкцией по установке.
+
+---
+
 ## ⚠️ Известные ограничения
 
-- **Комментарии** — только на отдельных строках (не в конце правил)
+- **Комментарии** — полная поддержка (inline и на отдельных строках)
 - **Рекурсия** — глубина рекурсии ограничена стеком Python (обычно ~1000)
 - **Lookahead/lookbehind** — не поддерживаются (это особенность BNF-подхода)
 - **Экранирование кавычек** — не поддерживается `\"`, используйте разные типы кавычек
+- **Hash в символьных классах** — `#` внутри `[...]` заменяется на заполнитель, что может повлиять на совпадение
 
+
+## 🛠 Разработка
+
+### Линтинг
+
+```bash
+ruff check pattern_grammar/
+```
+
+### Проверка типов
+
+```bash
+mypy pattern_grammar/
+```
+
+### Тестирование
+
+```bash
+pytest --cov=pattern_grammar --cov-report=term-missing
+```
+
+---
+
+## 🔌 Интеграция с Pydantic
+
+Ядро `Pattern` работает **без Pydantic**:
+
+```bash
+pip install pattern-grammar
+```
+
+Для интеграции с Pydantic установите опциональные зависимости:
+
+```bash
+pip install pattern-grammar[pydantic]
+```
+
+### Пример
+
+```python
+from pydantic import BaseModel, ValidationError
+from pattern_grammar import Pattern
+from pattern_grammar.integrations.pydantic import PatternType
+
+email_pattern = Pattern('email ::= [a-z]+ "@" [a-z]+ ".com"')
+
+class User(BaseModel):
+    email: PatternType(email_pattern, 'email')
+
+user = User(email='user@example.com')  # OK
+# User(email='invalid')               # raises ValidationError
+```
+
+### Кастомные сообщения об ошибках через `@fail`
+
+```python
+fail_pattern = Pattern(
+    'email ::= [a-z]+ "@" [a-z]+ ".com" @fail "неверный email"'
+)
+
+class UserWithFail(BaseModel):
+    email: PatternType(fail_pattern, 'email')
+
+UserWithFail(email='123@example.com')
+# raises ValueError: неверный email
+```
+
+См. также: [examples/pydantic_integration.py](examples/pydantic_integration.py)
+
+---
 
 ## 📄 Лицензия
 

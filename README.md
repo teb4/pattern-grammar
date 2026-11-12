@@ -4,6 +4,14 @@
 
 ---
 
+## 🤖 LLM Skill
+
+This project includes an **LLM skill guide** for replacing regex with pattern grammar.
+When working with this repository and need to convert regex → pattern grammar,
+read the skill first: **[docs/knowledge-base/skills/use-pattern-grammar-for-regex.md](docs/knowledge-base/skills/use-pattern-grammar-for-regex.md)**
+
+---
+
 ## 🎯 What is this?
 
 `pattern-grammar` is a library for describing patterns in a human-friendly way.
@@ -80,6 +88,20 @@ tree = pattern.parse('expr', '2 + 3 * 4')
 print(tree.pretty())
 ```
 
+### Example 3: Case-insensitive matching
+
+Use `ignore_case=True` to match text regardless of case:
+
+```python
+# Case-insensitive username matching
+pattern = Pattern("username ::= [a-zA-Z0-9._%+-]+")
+
+print(pattern.match('username', 'TEST', ignore_case=True))   # True
+print(pattern.findall('username', 'ABC abc AbC aBc', ignore_case=True))  # ['ABC', 'abc', 'AbC', 'aBc']
+```
+
+> **Note:** For recursive rules (Lark), `ignore_case` is implemented via `text.lower()` before parsing. The grammar should contain only lowercase characters.
+
 ---
 
 ## 📖 Syntax
@@ -134,32 +156,20 @@ dec-octet ::= "25"[0-5]
 
 ### Comments
 
-Comments start with `#` and **must be on their own line**. Inline comments at the end of a rule line are not supported.
+Comments start with `#` and can be placed on their own line or inline at the end of a rule line. The parser correctly ignores `#` characters inside string literals and character classes.
 
 ```bnf
 # ✅ Correct: comment on its own line
 email ::= username "@" domain "." tld
-username ::= [a-z]+    # ❌ WRONG: inline comment
-domain ::= [a-z]+      # The parser will read this as part of the rule!
 
-# ✅ Correct:
-# Domain definition
-domain ::= [a-z]+
+# ✅ Correct: inline comment
+username ::= [a-z]+    # username definition
+domain   ::= [a-z]+    # domain definition
 ```
-
-> **Important:** The parser reads the entire line. If you place a `#` after a rule, everything including the comment will be treated as part of the rule. This can lead to unexpected errors.
-
-### Why this design?
-
-This decision was made intentionally to:
-
-- Keep grammar processing simple and fast — no need to escape `#` in rules
-- Eliminate ambiguity — it's always clear what's a rule and what's a comment
-- Maintain compatibility with BNF-like formats — many parsers require comments on separate lines
 
 ### Exception
 
-The `#` character can be used inside string literals and character classes:
+The `#` character can be used inside string literals and character classes — it will be preserved as part of the rule:
 
 ```bnf
 # ✅ Valid: # inside a string
@@ -230,6 +240,96 @@ word        ::= [a-zA-Z0-9_]+  # Word
 whitespace  ::= \s             # Whitespace character
 ```
 
+### Exception messages with `@fail`
+
+Attach a custom error message to any rule using `@fail`. The message is raised as `PatternError` when the text does **not** match the rule:
+
+```bnf
+email ::= [a-z]+ "@" [a-z]+ ".com" @fail "invalid email address"
+```
+
+```python
+pattern.match('email', 'user@example.com')   # True
+# pattern.match('email', 'invalid')          # raises PatternError: invalid email address
+```
+
+### Importing external grammars
+
+Reuse rules from built-in libraries or external `.pg` files:
+
+```bnf
+import "rfc3986-core.pg"
+
+url ::= scheme "://" authority path? query? fragment?
+```
+
+Supported import forms:
+
+| Syntax | Description |
+|--------|-------------|
+| `import "rfc3986-core.pg"` | Built-in library |
+| `import "./common.pg"` | Relative path (resolved against the calling file's directory) |
+| `import "/abs/path.pg"` | Absolute path |
+
+---
+
+## 🌍 Unicode Classes
+
+For matching non-ASCII characters (Cyrillic, Greek, Arabic, CJK, etc.), use the
+`UNICODE.<Class>` syntax inside character classes. The library automatically
+switches to the [`regex`](https://pypi.org/project/regex/) package which
+supports Unicode properties (`\p{...}`).
+
+```python
+from pattern_grammar import Pattern
+
+# Cyrillic letters
+pattern = Pattern("""
+    cyrillic_word ::= [UNICODE.Cyrillic]+
+""")
+print(pattern.match('cyrillic_word', 'привет'))  # True
+print(pattern.match('cyrillic_word', 'hello'))   # False
+
+# Mixed ASCII and Unicode
+pattern = Pattern("""
+    email ::= [UNICODE.Letter UNICODE.Digit ._%+\\-]+
+            "@" [UNICODE.Letter UNICODE.Digit .\\-]+
+            "." [UNICODE.Letter]{2,}
+""")
+print(pattern.match('email', 'café@münchen.de'))  # True
+print(pattern.match('email', '用户@例子.中国'))    # True
+```
+
+### Available Unicode classes
+
+| Class | Regex equivalent | Description |
+|-------|-----------------|-------------|
+| `UNICODE.Letter` | `\p{L}` | Any letter |
+| `UNICODE.Lowercase` | `\p{Ll}` | Lowercase letter |
+| `UNICODE.Uppercase` | `\p{Lu}` | Uppercase letter |
+| `UNICODE.Digit` | `\p{Nd}` | Decimal digit |
+| `UNICODE.Number` | `\p{N}` | Any number |
+| `UNICODE.Punctuation` | `\p{P}` | Punctuation |
+| `UNICODE.Separator` | `\p{Z}` | Whitespace separator |
+| `UNICODE.Symbol` | `\p{S}` | Symbol |
+| `UNICODE.Mark` | `\p{M}` | Combining mark |
+| `UNICODE.Latin` | `\p{Script=Latin}` | Latin script |
+| `UNICODE.Cyrillic` | `\p{Script=Cyrillic}` | Cyrillic script |
+| `UNICODE.Han` | `\p{Script=Han}` | Chinese characters |
+| `UNICODE.Arabic` | `\p{Script=Arabic}` | Arabic script |
+| `UNICODE.Devanagari` | `\p{Script=Devanagari}` | Hindi/Marathi script |
+| `UNICODE.Hangul` | `\p{Script=Hangul}` | Korean script |
+| `UNICODE.Hiragana` | `\p{Script=Hiragana}` | Japanese hiragana |
+| `UNICODE.Katakana` | `\p{Script=Katakana}` | Japanese katakana |
+| `UNICODE.Thai` | `\p{Script=Thai}` | Thai script |
+| `UNICODE.Hebrew` | `\p{Script=Hebrew}` | Hebrew script |
+| `UNICODE.AlphaNum` | `[\p{L}\p{Nd}]` | Letter or digit |
+| `UNICODE.Word` | `[\p{L}\p{Nd}_]` | Word character |
+
+> **Note:** Unicode classes require the `regex` package. Install it with:
+> `pip install regex`. When `regex` is unavailable and a pattern uses
+> `UNICODE.*`, an `ImportError` is raised with installation instructions.
+
 ---
 
 ## 🔍 API
@@ -283,6 +383,20 @@ Returns information about the grammar.
 ```python
 info = pattern.get_info()
 print(info)
+```
+
+### `pattern.generate(rule_name: str, count: int = 1, max_depth: int = 20) -> List[str]`
+
+Generates random strings that match the given rule:
+
+```python
+pattern = Pattern("""
+    digit   ::= [0-9]
+    pin     ::= digit{4}
+""")
+
+print(pattern.generate('pin'))         # "3847"
+print(pattern.generate('pin', count=5)) # ["1234", "5678", ...]
 ```
 
 ### Quick functions
@@ -732,6 +846,9 @@ python examples/math_expressions.py
 
 # Date validation example
 python examples/date_validation.py
+
+# RFC 3986 full URI grammar example
+python examples/rfc3986_full.py
 ```
 
 ---
@@ -753,11 +870,82 @@ python examples/date_validation.py
 
 ## ⚠️ Known limitations
 
-- **Comments** — only on separate lines (not at the end of rules)
+- **Comments** — fully supported (inline and on separate lines)
 - **Recursion** — recursion depth is limited by Python's stack (typically ~1000)
 - **Lookahead/lookbehind** — not supported (this is a characteristic of the BNF approach)
 - **Quote escaping** — `\"` is not supported; use different quote types instead
+- **Hash in character classes** — `#` inside `[...]` is replaced with a placeholder, which may affect matching
 
+
+## 🛠 Development
+
+### Linting
+
+```bash
+ruff check pattern_grammar/
+```
+
+### Type checking
+
+```bash
+mypy pattern_grammar/
+```
+
+### Testing
+
+```bash
+pytest --cov=pattern_grammar --cov-report=term-missing
+```
+
+---
+
+## 🔌 Pydantic Integration
+
+The core `Pattern` class works **without** Pydantic:
+
+```bash
+pip install pattern-grammar
+```
+
+For Pydantic integration, install the optional extras:
+
+```bash
+pip install pattern-grammar[pydantic]
+```
+
+### Example
+
+```python
+from pydantic import BaseModel, ValidationError
+from pattern_grammar import Pattern
+from pattern_grammar.integrations.pydantic import PatternType
+
+email_pattern = Pattern('email ::= [a-z]+ "@" [a-z]+ ".com"')
+
+class User(BaseModel):
+    email: PatternType(email_pattern, 'email')
+
+user = User(email='user@example.com')  # OK
+# User(email='invalid')               # raises ValidationError
+```
+
+### Custom error messages with `@fail`
+
+```python
+fail_pattern = Pattern(
+    'email ::= [a-z]+ "@" [a-z]+ ".com" @fail "неверный email"'
+)
+
+class UserWithFail(BaseModel):
+    email: PatternType(fail_pattern, 'email')
+
+UserWithFail(email='123@example.com')
+# raises ValueError: неверный email
+```
+
+See also: [examples/pydantic_integration.py](examples/pydantic_integration.py)
+
+---
 
 ## 📄 License
 

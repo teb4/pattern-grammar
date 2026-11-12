@@ -4,6 +4,8 @@
 
 from typing import Dict, List, Set
 
+from .constants import MAX_RECURSION_DEPTH
+
 
 class RecursionAnalyzer:
     """Анализатор рекурсии в грамматике"""
@@ -13,20 +15,19 @@ class RecursionAnalyzer:
 
     def find_recursive_rules(self) -> Set[str]:
         """Находит все рекурсивные правила"""
-        recursive = set()
+        recursive: Set[str] = set()
 
         for rule in self.rules:
-            # Проверяем только правила, которые ссылаются на другие правила
-            if self._has_non_terminal(rule) and self._has_recursion(rule, []):
+            has_recursion = (self._has_non_terminal(rule) and self._has_recursion(rule, [], 0))
+            if has_recursion:
                 recursive.add(rule)
 
-        # Также находим правила, которые зависят от рекурсивных
-        indirect_recursive = set()
+        indirect_recursive: Set[str] = set()
         for rule in self.rules:
             if rule in recursive:
                 continue
-            # Правило должно ссылаться на другие правила, чтобы быть кандидатом
-            if self._has_non_terminal(rule) and self._depends_on_recursive(rule, recursive, set()):
+            depends_on_recursive = (self._has_non_terminal(rule) and self._depends_on_recursive(rule, recursive, set()))
+            if depends_on_recursive:
                 indirect_recursive.add(rule)
 
         return recursive | indirect_recursive
@@ -38,15 +39,19 @@ class RecursionAnalyzer:
                 return True
         return False
 
-    def _has_recursion(self, rule: str, path: List[str]) -> bool:
+    def _has_recursion(self, rule: str, path: List[str], depth: int) -> bool:
+        """Проверяет рекурсию с ограничением глубины"""
+        if depth > MAX_RECURSION_DEPTH:
+            return False
+
         if rule in path:
             return True
 
-        new_path = path + [rule]  # копия, не мутируем оригинал
+        new_path = path + [rule]
 
         for token in self.rules.get(rule, []):
             if token in self.rules:
-                if self._has_recursion(token, new_path):
+                if self._has_recursion(token, new_path, depth + 1):
                     return True
 
         return False

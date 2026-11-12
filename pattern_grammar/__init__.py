@@ -4,22 +4,40 @@ Pattern Grammar - Читаемые паттерны вместо регуляр�
 Автоматически использует:
 - Регулярные выражения для простых правил
 - Lark парсер для рекурсивных правил
+- Модуль regex (с поддержкой Unicode) при наличии UNICODE-классов
 """
 
-from .parser import BNFParser
 from .analyzer import RecursionAnalyzer
-from .regex_converter import RegexConverter
+from .api import match, parse
+from .errors import PatternError
+from .generator import GrammarGenerator
 from .lark_converter import LarkConverter
-from lark import Lark, Tree, Token
-import re
-from typing import Dict, Set, Optional, List
+from .parser import BNFParser
+from .pattern_compile import CompileEngine
+from .pattern_fail import FailChecker
+from .pattern_info import PatternInfo
+from .pattern_match import MatchEngine
+from .pattern_parse import ParseEngine
+from .regex_converter import RegexConverter
+from .constants import RULE_NAME_TYPE_ERROR
+
+from typing import List, Optional
+
 
 __version__ = "0.1.0"
 
-
-class PatternError(Exception):
-    """Базовое исключение для ошибок Pattern Grammar"""
-    pass
+__all__ = [
+    'Pattern',
+    'PatternError',
+    'BNFParser',
+    'RecursionAnalyzer',
+    'RegexConverter',
+    'LarkConverter',
+    'GrammarGenerator',
+    'match',
+    'parse',
+    '__version__',
+]
 
 
 class Pattern:
@@ -37,221 +55,135 @@ class Pattern:
     True
     """
 
-    def __init__(self, grammar_text: str):
+    def __init__(
+        self,
+        grammar_text: str,
+        base_path: Optional[str] = None,
+    ):
         """
-        Инициализирует паттерн из текста грамматики
+        Инициализирует паттерн из текста грамматики.
 
         :param grammar_text: Текст грамматики в формате Pattern Grammar
+        :param base_path: Базовый путь для разрешения относительных импортов.
+                          Если передан путь к файлу, импорты разрешаются
+                          относительно его директории.
         """
+        if not isinstance(grammar_text, str):
+            raise TypeError("grammar_text должен быть строкой")
+
         self.grammar_text = grammar_text
+        self._base_path = base_path
+        # Компилируем грамматику в движки (заполняем self.rules, regex_engines и т.д.)
+        CompileEngine(self.grammar_text, self._base_path).compile(self)
+        # Связываем хелперы со скомпилированным состоянием
+        match_engine = MatchEngine(
+            self.regex_engines, self.parser_engines,
+            self.regex_rules, self.recursive_rules, None,
+        )
+        fail_checker = FailChecker(
+            self.rules, self.regex_rules,
+            self._fail_messages, self._fail_group_map, self.parser, match_engine,
+        )
+        match_engine._fail_checker = fail_checker
+        self._match = match_engine
+        self._fail = fail_checker
+        self._parse = ParseEngine(
+            self.regex_engines, self.parser_engines,
+            self.regex_rules, self.recursive_rules,
+        )
+        self._info = PatternInfo(
+            self.rules, self.regex_rules, self.recursive_rules, self.regex_engines,
+        )
 
-        # Парсим грамматику
-        self.parser = BNFParser()
-        self.parser.parse(grammar_text)
-        self.rules = self.parser.get_rules()
-
-        # Анализируем рекурсию
-        self.analyzer = RecursionAnalyzer(self.rules)
-        self.recursive_rules = self.analyzer.find_recursive_rules()
-        self.regex_rules = set(self.rules.keys()) - self.recursive_rules
-
-        # Компилируем движки
-        self.regex_engines: Dict[str, Dict[str, re.Pattern]] = {}
-        self.parser_engines: Dict[str, Lark] = {}
-
-        self._compile_all()
-
-    def _compile_all(self):
-        """Компилирует все правила"""
-        # Компилируем нерекурсивные правила в regex
-        regex_converter = RegexConverter(self.rules, self.regex_rules, self.parser)
-
-        for rule_name in self.regex_rules:
-            try:
-                regex_str = regex_converter.convert(rule_name)
-                #print(f"DEBUG: Компилирую {rule_name} -> {regex_str}")
-
-                # Для match используем ^...$ (полное совпадение)
-                # Для findall используем без якорей (поиск в тексте)
-                self.regex_engines[rule_name] = {
-                    'match': re.compile(f'^{regex_str}$'),
-                    'findall': re.compile(regex_str)
-                }
-            except Exception as e:
-                raise PatternError(f"Не удалось скомпилировать правило '{rule_name}' в regex: {e}")
-
-        ## Компилируем рекурсивные правила через Lark
-        #lark_converter = LarkConverter(self.rules)
-
-        # Компилируем рекурсивные правила через Lark
-        #lark_converter = LarkConverter(self.rules, self.recursive_rules)
-        #lark_converter = LarkConverter(self.rules, self.recursive_rules, self.regex_rules)
-        lark_converter = LarkConverter(self.rules, self.recursive_rules, self.regex_rules, self.parser)
-
-        for rule_name in self.recursive_rules:
-            try:
-                lark_grammar = lark_converter.convert(rule_name)
-                # Восстанавливаем оригинальные символы в Lark грамматике
-                lark_grammar = self.parser.restore_special_chars(lark_grammar)
-
-                #print(f"\n=== Lark грамматика для '{rule_name}' ===")
-                #print(lark_grammar)
-
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name)
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='earley')
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='earley', lexer='standard')
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='earley', lexer='basic')
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, lexer='basic')
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='earley', lexer='basic')
-                #self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='earley')
-
-                #print(f"\n=== Lark грамматика для '{rule_name}' ===")
-                #print(lark_grammar)
-                #print("=" * 40)
-
-                self.parser_engines[rule_name] = Lark(lark_grammar, start=rule_name, parser='lalr')
-            except Exception as e:
-                raise PatternError(f"Не удалось скомпилировать правило '{rule_name}' через Lark: {e}")
-
-    def match(self, rule_name: str, text: str) -> bool:
+    def match(self, rule_name: str, text: str, *, ignore_case: bool = False) -> bool:
         """
         Проверяет, соответствует ли текст правилу
 
         :param rule_name: Имя правила
         :param text: Текст для проверки
+        :param ignore_case: Игнорировать регистр символов (по умолчанию False)
         :return: True если соответствует, иначе False
         """
-        if rule_name in self.regex_rules:
-            engines = self.regex_engines.get(rule_name)
-            if not engines:
-                raise PatternError(f"Правило '{rule_name}' не скомпилировано")
+        return self._match.match(rule_name, text, ignore_case=ignore_case)
 
-            pattern = engines['match']
-            return pattern.match(text) is not None
-
-        elif rule_name in self.recursive_rules:
-            parser = self.parser_engines.get(rule_name)
-            if not parser:
-                raise PatternError(f"Парсер для правила '{rule_name}' не создан")
-
-            try:
-                #print(f"\n=== Парсинг {rule_name} ===")
-                #print(f"Текст: {repr(text)}")
-                result = parser.parse(text)
-                #print(f"Результат парсинга: {result}")
-                #print("=== Парсинг успешен ===\n")
-                return True
-            except Exception as e:
-                #print(f"!!! Ошибка парсинга: {e}")
-                #import traceback
-                #traceback.print_exc()
-                #print("=== Парсинг失敗 ===\n")
-                return False
-
-        else:
-            raise PatternError(f"Правило '{rule_name}' не найдено")
-
-    def parse(self, rule_name: str, text: str) -> Optional[Tree]:
+    def parse(
+        self, rule_name: str, text: str, *, ignore_case: bool = False
+    ) -> Optional[object]:
         """
         Парсит текст и возвращает дерево разбора (AST)
 
         :param rule_name: Имя правила
         :param text: Текст для парсинга
+        :param ignore_case: Игнорировать регистр символов (по умолчанию False)
         :return: Дерево разбора или None
+        :note:
+            Для рекурсивных правил ignore_case реализован через text.lower()
+            перед парсингом. Грамматика при этом должна содержать только
+            символы в нижнем регистре.
         """
-        if rule_name in self.recursive_rules:
-            parser = self.parser_engines.get(rule_name)
-            if not parser:
-                raise PatternError(f"Парсер для правила '{rule_name}' не создан")
+        return self._parse.parse(rule_name, text, ignore_case=ignore_case)
 
-            try:
-                return parser.parse(text)
-            except Exception as e:
-                raise PatternError(f"Ошибка парсинга: {e}")
-
-        elif rule_name in self.regex_rules:
-            engines = self.regex_engines.get(rule_name)
-            if not engines:
-                raise PatternError(f"Правило '{rule_name}' не скомпилировано")
-
-            pattern = engines['match']
-            match = pattern.match(text)
-            if match:
-                # Для regex возвращаем дерево с одним узлом
-                return Tree('match', [Token('VALUE', text)])
-            return None
-
-        else:
-            raise PatternError(f"Правило '{rule_name}' не найдено")
-
-    def findall(self, rule_name: str, text: str) -> List[str]:
+    def findall(
+        self, rule_name: str, text: str, *, ignore_case: bool = False
+    ) -> list:
         """
         Находит все совпадения правила в тексте
 
         :param rule_name: Имя правила
         :param text: Текст для поиска
+        :param ignore_case: Игнорировать регистр символов (по умолчанию False)
         :return: Список совпадений
         """
-        if rule_name not in self.regex_rules:
-            raise PatternError(f"Метод findall доступен только для нерекурсивных правил")
+        return self._match.findall(rule_name, text, ignore_case=ignore_case)
 
-        engines = self.regex_engines.get(rule_name)
-        if not engines:
-            raise PatternError(f"Правило '{rule_name}' не скомпилировано")
+    def generate(
+        self,
+        rule_name: str,
+        count: int = 1,
+        max_depth: Optional[int] = None,
+    ) -> List[str]:
+        """
+        Генерирует случайные строки, соответствующие правилу.
 
-        pattern = engines['findall']
-        # ОТЛАДКА
-        #print(f"DEBUG findall: pattern={pattern.pattern}")
-        #print(f"DEBUG findall: text={repr(text)}")
-        result = pattern.findall(text)
-        #print(f"DEBUG findall: result={result}")
+        :param rule_name: Имя правила
+        :param count: Количество строк для генерации (по умолчанию 1)
+        :param max_depth: Максимальная глубина рекурсии (по умолчанию 20)
+        :return: Список сгенерированных строк (одна строка, если count=1)
+        """
+        if not isinstance(rule_name, str):
+            raise TypeError(RULE_NAME_TYPE_ERROR)
+        invalid_count = (not isinstance(count, int) or count < 1)
+        if invalid_count:
+            raise ValueError("count должен быть положительным целым числом")
 
-        return result
+        generator = GrammarGenerator(
+            self.rules,
+            self.regex_rules,
+            self.recursive_rules,
+            self.parser,
+        )
+        results = generator.generate(rule_name, count, max_depth)
+        return results
+
+    def to_json_schema(self, rule: str) -> dict:
+        """
+        Возвращает JSON Schema для указанного правила.
+
+        Для нерекурсивных правил:
+            {"type": "string", "pattern": "<regex>"}
+
+        Для рекурсивных правил:
+            {"type": "string", "description": "<BNF-описание>"}
+
+        :param rule: Имя правила
+        :return: Словарь JSON Schema
+        :raises PatternError: Если правило не найдено
+        :raises TypeError: Если rule не строка
+        """
+        return self._info.to_json_schema(rule)
 
     def get_info(self) -> dict:
         """
         Возвращает отладочную информацию о грамматике
-
-        :return: Словарь с информацией
         """
-        # Форматируем правила для вывода
-        formatted_rules = {}
-        for name, tokens in self.rules.items():
-            formatted_rules[name] = ' '.join(tokens)
-
-        return {
-            'total_rules': len(self.rules),
-            'regex_rules': sorted(list(self.regex_rules)),
-            'parser_rules': sorted(list(self.recursive_rules)),
-            'rules': formatted_rules
-        }
-
-    def __repr__(self):
-        return f"<Pattern rules={len(self.rules)} regex={len(self.regex_rules)} parser={len(self.recursive_rules)}>"
-
-
-# Удобные функции для быстрого использования
-def match(grammar_text: str, rule_name: str, text: str) -> bool:
-    """
-    Быстрая проверка соответствия
-
-    :param grammar_text: Текст грамматики
-    :param rule_name: Имя правила
-    :param text: Текст для проверки
-    :return: True если соответствует, иначе False
-    """
-    pattern = Pattern(grammar_text)
-    return pattern.match(rule_name, text)
-
-
-def parse(grammar_text: str, rule_name: str, text: str) -> Optional[Tree]:
-    """
-    Быстрый парсинг
-
-    :param grammar_text: Текст грамматики
-    :param rule_name: Имя правила
-    :param text: Текст для парсинга
-    :return: Дерево разбора или None
-    """
-    pattern = Pattern(grammar_text)
-    return pattern.parse(rule_name, text)
+        return self._info.get_info()
