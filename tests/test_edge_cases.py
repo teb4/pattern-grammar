@@ -3,7 +3,7 @@
 """
 import pytest
 import re
-from pattern_grammar import Pattern, PatternError
+from pattern_grammar import Pattern
 from pattern_grammar.parser import BNFParser
 
 

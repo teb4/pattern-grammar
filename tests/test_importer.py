@@ -9,8 +9,6 @@ Unit-тесты для модуля importer.
 - Правила из импортированной грамматики добавляются к основной
 - При конфликте имён приоритет у основной грамматики
 """
-import os
-import tempfile
 import pytest
 from pattern_grammar import Pattern
 from pattern_grammar.importer import (
@@ -195,7 +193,7 @@ rule ::= [a-z]+
         lib_file = tmp_path / 'common.pg'
         lib_file.write_text('common ::= [A-Z]+')
 
-        grammar = f'import "./common.pg"\nrule ::= [a-z]+'
+        grammar = 'import "./common.pg"\nrule ::= [a-z]+'
         p = Pattern(grammar, base_path=str(tmp_path / 'main.pg'))
         assert 'common' in p.rules
         assert 'rule' in p.rules

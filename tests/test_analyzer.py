@@ -1,7 +1,6 @@
 """
 Unit-тесты для RecursionAnalyzer.
 """
-import pytest
 from pattern_grammar.analyzer import RecursionAnalyzer
 
 

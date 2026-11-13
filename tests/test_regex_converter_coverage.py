@@ -4,7 +4,6 @@ Unit-тесты для покрытия непокрытых веток RegexCon
 Цель — достичь 100% покрытия regex_converter.py.
 Непокрытые строки: 59, 87, 98, 126-156, 165, 173-179, 196, 224-231
 """
-import pytest
 from pattern_grammar.regex_converter import RegexConverter
 from pattern_grammar.parser import BNFParser
 

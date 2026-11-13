@@ -2,7 +2,6 @@
 Unit-тесты для класса Pattern и модульных функций.
 """
 import pytest
-import re
 from lark import Tree, Token
 from pattern_grammar import Pattern, PatternError, match, parse
 

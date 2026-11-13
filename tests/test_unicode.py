@@ -139,31 +139,31 @@ class TestExpandUnicodeInCharClass:
 
     def test_simple_unicode(self):
         result = expand_unicode_in_char_class("[UNICODE.Letter]")
-        assert result == "[\p{L}]"
+        assert result == r"[\p{L}]"
 
     def test_unicode_with_space(self):
         result = expand_unicode_in_char_class("[UNICODE.Letter +]")
-        assert result == "[\p{L} +]"
+        assert result == r"[\p{L} +]"
 
     def test_multiple_unicode(self):
         result = expand_unicode_in_char_class("[UNICODE.Letter UNICODE.Digit]")
-        assert result == "[\p{L} \p{Nd}]"
+        assert result == r"[\p{L} \p{Nd}]"
 
     def test_unicode_with_literal_chars(self):
         result = expand_unicode_in_char_class("[UNICODE.Letter _.-]")
-        assert result == "[\p{L} _.-]"
+        assert result == r"[\p{L} _.-]"
 
     def test_cyrillic(self):
         result = expand_unicode_in_char_class("[UNICODE.Cyrillic -]")
-        assert result == "[\p{Script=Cyrillic} -]"
+        assert result == r"[\p{Script=Cyrillic} -]"
 
     def test_alpha_num(self):
         result = expand_unicode_in_char_class("[UNICODE.AlphaNum]")
-        assert result == "[[\p{L}\p{Nd}]]"
+        assert result == r"[[\p{L}\p{Nd}]]"
 
     def test_word(self):
         result = expand_unicode_in_char_class("[UNICODE.Word]")
-        assert result == "[[\p{L}\p{Nd}_]]"
+        assert result == r"[[\p{L}\p{Nd}_]]"
 
     def test_non_char_class_unchanged(self):
         result = expand_unicode_in_char_class("UNICODE.Letter")

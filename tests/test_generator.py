@@ -12,7 +12,6 @@ Unit-тесты для GrammarGenerator.
 """
 import pytest
 from pattern_grammar import Pattern
-from pattern_grammar.generator import GrammarGenerator
 
 
 # =====================================================================

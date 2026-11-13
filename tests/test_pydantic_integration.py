@@ -9,7 +9,7 @@ import sys
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from pattern_grammar import Pattern, PatternError
+from pattern_grammar import Pattern
 from pattern_grammar.integrations.pydantic import PatternType, PatternValidator
 
 

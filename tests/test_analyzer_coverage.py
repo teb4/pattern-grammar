@@ -4,7 +4,6 @@ Unit-тесты для покрытия непокрытых веток Recursio
 Цель — достичь 100% покрытия analyzer.py.
 Непокрытые строки: 29, 43
 """
-import pytest
 from pattern_grammar.analyzer import RecursionAnalyzer
 
 

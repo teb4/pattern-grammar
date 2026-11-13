@@ -3,10 +3,9 @@
 """
 import pytest
 from pattern_grammar.parser import BNFParser
-from pattern_grammar.analyzer import RecursionAnalyzer
 from pattern_grammar.regex_converter import RegexConverter
 from pattern_grammar.lark_converter import LarkConverter
-from pattern_grammar import Pattern, PatternError
+from pattern_grammar import Pattern
 
 
 # =====================================================================

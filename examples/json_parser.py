@@ -153,7 +153,7 @@ for json_str, expected, description in TEST_CASES:
         grammar_result = pattern.match('json', json_str)
         if grammar_result:
             grammar_matches += 1
-    except Exception as e:
+    except Exception:
         grammar_result = False
 
     # Сравниваем с ожиданием (логика из test_url_rfc3986.py)

@@ -126,7 +126,7 @@ def check_quick_functions():
     print("⚡ Быстрые функции (match/parse)... ", end="", flush=True)
 
     # Быстрая проверка (regex-бэкенд)
-    r1 = match("""
+    r1 = match(r"""
         email ::= [a-z]+@[a-z]+\.[a-z]{2,}
     """, 'email', 'test@example.com')  # True
 
