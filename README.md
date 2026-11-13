@@ -8,7 +8,7 @@
 
 This project includes an **LLM skill guide** for replacing regex with pattern grammar.
 When working with this repository and need to convert regex → pattern grammar,
-read the skill first: **[docs/knowledge-base/skills/use-pattern-grammar-for-regex.md](docs/knowledge-base/skills/use-pattern-grammar-for-regex.md)**
+read the skill first: **[SKILL.md](SKILL.md)**
 
 ---
 

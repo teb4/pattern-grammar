@@ -1,40 +1,8 @@
 ---
-id: skill-regex-001
-type: skill
-name: use-pattern-grammar-for-regex-replacement
+name: pattern-grammar-regex-replacement
+description: Replaces complex regular expressions with human-readable pattern grammar rules using the pattern-grammar library. Use when reviewing code with hard-to-read regex or validating structured formats like URL, email, dates, and IP addresses.
 version: 1.0.0
-status: proven
-created: 2026-06-21
-updated: 2026-06-21
-
-# Метаданные для LLM-агентов
-trigger: |
-  Применять, когда нужно заменить регулярное выражение на читаемую грамматику,
-  особенно для сложных паттернов (URL, email, даты, математические выражения,
-  IPv4/IPv6, семантическое.versioning). Также применять при ревью кода,
-  когда обнаружено использование regex для валидации.
-inputs:
-  - name: regex_pattern
-    type: string
-    description: Исходное регулярное выражение для замены
-    required: false
-  - name: description
-    type: string
-    description: Описание, что валидирует паттерн
-    required: true
-outputs:
-  - name: grammar_text
-    type: string
-    description: BNF-подобная грамматика, заменяющая regex
-  - name: python_example
-    type: string
-    description: Пример использования через Pattern API
-related_skills:
-  - write-graveyard-entry
-related_mental_models:
-  - epistemic-architecture
-graveyard_refs:
-  - failed-knowledge-organizations
+author: teb4
 ---
 
 # Использование pattern-grammar для замены regex

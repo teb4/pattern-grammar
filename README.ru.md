@@ -8,7 +8,7 @@
 
 В проекте есть **скилл для LLM-агентов** — руководство по замене regex на pattern grammar.
 При работе с этим репозиторием, если нужно конвертировать regex → pattern grammar,
-сначала прочитайте скилл: **[docs/knowledge-base/skills/use-pattern-grammar-for-regex.md](docs/knowledge-base/skills/use-pattern-grammar-for-regex.md)**
+сначала прочитайте скилл: **[SKILL.md](SKILL.md)**
 
 ---
 
